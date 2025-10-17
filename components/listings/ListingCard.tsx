@@ -78,11 +78,11 @@ export function ListingCard({ listing, onSelect, onReferralClick }: ListingCardP
         aria-disabled={!referralEnabled}
         aria-label={
           referralEnabled
-            ? `Open referral link for ${listing.title}`
+            ? `View job posting for ${listing.title}`
             : `Referral unavailable for ${listing.title}`
         }
       >
-        {referralEnabled ? "Open referral link" : "Referral unavailable"}
+        {referralEnabled ? "View job posting" : "Referral unavailable"}
       </button>
     </article>
   );

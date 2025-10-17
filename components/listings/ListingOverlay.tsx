@@ -95,9 +95,9 @@ export function ListingOverlay({ listing, onClose, onReferralClick }: ListingOve
                   }
                 }}
                 className="inline-flex items-center justify-center rounded-full bg-whopPrimary px-4 py-2 text-sm font-semibold text-white shadow-card transition hover:shadow-lg"
-                aria-label={`Open referral link for ${listing.title}`}
+                aria-label={`View job posting for ${listing.title}`}
               >
-                Open referral link
+                View job posting
               </button>
             ) : (
               <span>Referral link not available.</span>
