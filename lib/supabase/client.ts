@@ -16,7 +16,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
  */
 export function getBrowserSupabaseClient(): SupabaseClient {
   if (!browserClient) {
-    browserClient = createClient(supabaseUrl, supabaseAnonKey, {
+    browserClient = createClient(supabaseUrl!, supabaseAnonKey!, {
       auth: {
         persistSession: false
       }

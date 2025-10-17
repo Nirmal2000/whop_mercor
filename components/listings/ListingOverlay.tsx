@@ -2,6 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef } from "react";
+import Markdown from "react-markdown";
 import type { ListingDetail } from "@/lib/supabase/listings";
 
 interface ListingOverlayProps {
@@ -12,13 +13,10 @@ interface ListingOverlayProps {
 
 export function ListingOverlay({ listing, onClose, onReferralClick }: ListingOverlayProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const descriptionParagraphs = useMemo(() => {
-    if (!listing.description) return [];
-    return listing.description
-      .split(/\n\n+/)
-      .map((segment) => segment.trim())
-      .filter(Boolean);
-  }, [listing.description]);
+  const referralUrl = useMemo(
+    () => buildReferralUrl(listing),
+    [listing.listingId, listing.referralLink]
+  );
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -67,27 +65,15 @@ export function ListingOverlay({ listing, onClose, onReferralClick }: ListingOve
           </button>
         </div>
 
-        <section className="space-y-3 text-white/80">
-          {descriptionParagraphs.length ? (
-            descriptionParagraphs.map((paragraph, index) => (
-              <p key={index} className="leading-relaxed">
-                {paragraph}
-              </p>
-            ))
-          ) : (
-            <p>No additional description provided.</p>
-          )}
-        </section>
-
-        <section className="space-y-2 text-sm text-white/70">
-          <div className="flex flex-wrap items-center gap-3 text-white/80">
+        <section className="space-y-3 rounded-xl bg-white/5 p-4 text-sm text-white/80">
+          <div className="flex flex-wrap items-center gap-3 text-white">
             {listing.payRate?.min || listing.payRate?.max ? (
-              <span className="rounded-full bg-white/10 px-3 py-1">
+              <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-white/90">
                 {formatPayRange(listing)}
               </span>
             ) : null}
             {listing.commitment ? (
-              <span className="rounded-full bg-white/5 px-3 py-1 text-white/60">
+              <span className="rounded-full bg-white/10 px-3 py-1 text-sm text-white/70">
                 {listing.commitment}
               </span>
             ) : null}
@@ -97,6 +83,39 @@ export function ListingOverlay({ listing, onClose, onReferralClick }: ListingOve
               </span>
             ) : null}
           </div>
+          <div className="text-xs text-white/60">
+            {referralUrl ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onReferralClick) {
+                    onReferralClick(listing);
+                  } else {
+                    window.open(referralUrl, "_blank", "noreferrer");
+                  }
+                }}
+                className="inline-flex items-center justify-center rounded-full bg-whopPrimary px-4 py-2 text-sm font-semibold text-white shadow-card transition hover:shadow-lg"
+                aria-label={`Open referral link for ${listing.title}`}
+              >
+                Open referral link
+              </button>
+            ) : (
+              <span>Referral link not available.</span>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-3 text-white/80">
+          {listing.description ? (
+            <Markdown>
+              {listing.description}
+            </Markdown>
+          ) : (
+            <p>No additional description provided.</p>
+          )}
+        </section>
+
+        <section className="space-y-2 text-sm text-white/70">
           {listing.metadata.hoursPerWeek ? (
             <p>Hours per week: {listing.metadata.hoursPerWeek}</p>
           ) : null}
@@ -105,27 +124,21 @@ export function ListingOverlay({ listing, onClose, onReferralClick }: ListingOve
           ) : null}
         </section>
 
-        <div className="mt-auto flex flex-col gap-3 pt-4">
-          {listing.referralLink ? (
-            <button
-              type="button"
-              onClick={() => onReferralClick?.(listing)}
-              className="inline-flex items-center justify-center rounded-full bg-whopPrimary px-5 py-3 text-sm font-semibold text-white shadow-card transition hover:shadow-lg"
-              aria-label={`Open referral link for ${listing.title}`}
-            >
-              Open referral link
-            </button>
-          ) : (
-            <span className="text-sm text-white/40">
-              Referral link not available for this listing.
-            </span>
-          )}
-        </div>
       </div>
     </div>
   );
 
   return createPortal(content, document.body);
+}
+
+function buildReferralUrl(listing: Pick<ListingDetail, "listingId" | "referralLink">): string | null {
+  if (listing.referralLink) {
+    return listing.referralLink;
+  }
+  if (!listing.listingId) {
+    return null;
+  }
+  return `https://work.mercor.com/jobs/${listing.listingId}?referralCode=b5b1c23c-b43c-4403-83c8-27e33c484fa9&utm_source=referral&utm_medium=share&utm_campaign=job_referral`;
 }
 
 function formatPayRange(listing: ListingDetail) {

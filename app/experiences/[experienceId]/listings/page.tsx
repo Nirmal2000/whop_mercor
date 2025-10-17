@@ -12,13 +12,13 @@ const DEFAULT_PAGE_SIZE = Number(
 );
 
 interface ListingsPageProps {
-  params: Promise<{ experienceId: string }> | { experienceId: string };
-  searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>;
+  params: Promise<{ experienceId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 async function unwrapOptionalParams<T>(value: Promise<T> | T | undefined, fallback: T): Promise<T> {
   if (value instanceof Promise) {
-    return value;
+    return await value;
   }
   return (value ?? fallback) as T;
 }
