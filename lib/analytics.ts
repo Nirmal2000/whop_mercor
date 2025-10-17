@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getServiceRoleSupabaseClient } from "@/lib/supabase/service-role";
 
 export type AnalyticsEventType =
   | "card_view"
@@ -11,16 +11,6 @@ export interface ListingEventRow {
   occurred_at: string;
 }
 
-export interface DailyMetricRow {
-  listing_id: string;
-  metric_date: string;
-  view_count: number;
-  overlay_open_count: number;
-  referral_click_count: number;
-  click_through_rate: number;
-  last_aggregated_at: string;
-}
-
 export interface DailyMetric {
   listingId: string;
   metricDate: string;
@@ -28,7 +18,7 @@ export interface DailyMetric {
   overlayOpenCount: number;
   referralClickCount: number;
   clickThroughRate: number;
-  lastAggregatedAt?: string;
+  listingName?: string | null;
 }
 
 export interface MetricFilters {
@@ -95,16 +85,16 @@ export function computeDailyMetrics(events: ListingEventRow[]): DailyMetric[] {
 export async function fetchListingMetrics(
   filters: MetricFilters
 ): Promise<DailyMetric[]> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = getServiceRoleSupabaseClient();
+  const startISO = `${filters.startDate}T00:00:00Z`;
+  const endISO = `${filters.endDate}T23:59:59Z`;
+
   let query = supabase
     .schema("job_listings")
-    .from("listing_metrics_daily")
-    .select(
-      "listing_id, metric_date, view_count, overlay_open_count, referral_click_count, click_through_rate, last_aggregated_at"
-    )
-    .gte("metric_date", filters.startDate)
-    .lte("metric_date", filters.endDate)
-    .order("metric_date", { ascending: false });
+    .from("listing_events")
+    .select("listing_id, event_type, occurred_at")
+    .gte("occurred_at", startISO)
+    .lte("occurred_at", endISO);
 
   if (filters.listingId) {
     query = query.eq("listing_id", filters.listingId);
@@ -116,13 +106,28 @@ export async function fetchListingMetrics(
     throw new Error(`Failed to load listing metrics: ${error.message}`);
   }
 
-  return (data ?? []).map((row: DailyMetricRow) => ({
-    listingId: row.listing_id,
-    metricDate: row.metric_date,
-    viewCount: row.view_count,
-    overlayOpenCount: row.overlay_open_count,
-    referralClickCount: row.referral_click_count,
-    clickThroughRate: row.click_through_rate,
-    lastAggregatedAt: row.last_aggregated_at
+  const metrics = computeDailyMetrics((data ?? []) as ListingEventRow[]);
+
+  if (!metrics.length) {
+    return metrics;
+  }
+
+  const listingIds = Array.from(new Set(metrics.map((metric) => metric.listingId)));
+  const { data: listingRows, error: listingError } = await supabase
+    .schema("job_listings")
+    .from("listings")
+    .select("listing_id, title")
+    .in("listing_id", listingIds);
+
+  const titleById = new Map<string, string | null>();
+  if (!listingError && listingRows) {
+    for (const row of listingRows) {
+      titleById.set(row.listing_id, row.title ?? null);
+    }
+  }
+
+  return metrics.map((metric) => ({
+    ...metric,
+    listingName: titleById.get(metric.listingId) ?? null
   }));
 }

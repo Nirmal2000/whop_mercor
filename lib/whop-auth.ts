@@ -1,23 +1,5 @@
-import { WhopServerSdk } from "@whop/api";
 import { headers } from "next/headers";
-
-const appId = process.env.NEXT_PUBLIC_WHOP_APP_ID;
-const apiKey = process.env.WHOP_API_KEY;
-const agentUserId = process.env.WHOP_AGENT_USER_ID;
-const companyId = process.env.WHOP_COMPANY_ID;
-
-if (!appId || !apiKey || !agentUserId || !companyId) {
-  throw new Error(
-    "Missing Whop environment variables. Check NEXT_PUBLIC_WHOP_APP_ID, WHOP_API_KEY, WHOP_AGENT_USER_ID, and WHOP_COMPANY_ID."
-  );
-}
-
-export const whopSdk = WhopServerSdk({
-  appId,
-  appApiKey: apiKey,
-  onBehalfOfUserId: agentUserId,
-  companyId
-});
+import { whopSdk as baseWhopSdk } from "@/lib/whop-sdk";
 
 type AccessLevel = "no_access" | "member" | "manager" | "admin";
 
@@ -26,17 +8,19 @@ interface AuthResult {
   accessLevel: AccessLevel;
 }
 
-/**
- * Verifies the calling user has access to the Whop experience and optionally
- * enforces an access level (e.g., admin).
- */
+export const whopSdk = baseWhopSdk;
+
+async function getUserIdFromRequest(): Promise<string> {
+  const headerList = await headers();
+  const { userId } = await whopSdk.verifyUserToken(headerList);
+  return userId;
+}
+
 export async function verifyExperienceAccess(
   experienceId: string,
   requiredLevel?: "admin"
 ): Promise<AuthResult> {
-  const headerList = await headers();
-  const { userId } = await whopSdk.verifyUserToken(headerList);
-
+  const userId = await getUserIdFromRequest();
   const { accessLevel } =
     await whopSdk.access.checkIfUserHasAccessToExperience({
       userId,
@@ -44,48 +28,76 @@ export async function verifyExperienceAccess(
     });
 
   if (requiredLevel && accessLevel !== requiredLevel) {
-    console.warn(`[whop-auth] Admin level required for experience ${experienceId}`, { userId, accessLevel });
+    console.warn(
+      `[whop-auth] Admin level required for experience ${experienceId}`,
+      { userId, accessLevel }
+    );
     throw new Error("User must be an admin to access this resource.");
   }
 
   if (accessLevel === "no_access") {
-    console.warn(`[whop-auth] User ${userId} lacks access to experience ${experienceId}`);
+    console.warn(
+      `[whop-auth] User ${userId} lacks access to experience ${experienceId}`
+    );
     throw new Error("User does not have access to this experience.");
   }
 
   return { userId, accessLevel };
 }
 
-/**
- * Returns whether the user is an admin for the configured Whop company.
- */
-export async function isCompanyAdmin(userId: string): Promise<boolean> {
-  const { accessLevel } =
-    await whopSdk.access.checkIfUserHasAccessToCompany({
-      companyId,
-      userId
-    });
+export async function getCompanyIdForExperience(
+  experienceId: string
+): Promise<string | null> {
+  try {
+    const experience = await whopSdk.experiences.getExperience({ experienceId });
+    return experience.company?.id ?? null;
+  } catch (error) {
+    console.warn(
+      `[whop-auth] Unable to resolve company for experience ${experienceId}`,
+      error
+    );
+    return null;
+  }
+}
+
+export async function isCompanyAdmin(
+  userId: string,
+  companyId: string
+): Promise<boolean> {
+  if (!companyId) {
+    return false;
+  }
+
+  const { accessLevel } = await whopSdk.access.checkIfUserHasAccessToCompany({
+    companyId,
+    userId
+  });
 
   return accessLevel === "admin";
 }
 
-/**
- * Throws if the user is not a Whop company admin.
- */
-export async function requireCompanyAdmin(userId: string): Promise<void> {
-  const admin = await isCompanyAdmin(userId);
+export async function requireCompanyAdmin(
+  userId: string,
+  companyId: string
+): Promise<void> {
+  const admin = await isCompanyAdmin(userId, companyId);
   if (!admin) {
     console.warn(
       `[whop-auth] Company admin access denied for user ${userId}`,
-      { userId }
+      { userId, companyId }
     );
     throw new Error("User must be a company admin.");
   }
 }
 
-export async function requireWhopCompanyAdmin(): Promise<string> {
-  const headerList = await headers();
-  const { userId } = await whopSdk.verifyUserToken(headerList);
-  await requireCompanyAdmin(userId);
+export async function requireWhopCompanyAdmin(
+  companyId: string
+): Promise<string> {
+  if (!companyId) {
+    throw new Error("companyId is required for admin verification");
+  }
+
+  const userId = await getUserIdFromRequest();
+  await requireCompanyAdmin(userId, companyId);
   return userId;
 }

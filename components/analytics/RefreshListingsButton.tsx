@@ -13,7 +13,11 @@ interface RefreshResult {
   recordsWritten?: number;
 }
 
-export function RefreshListingsButton() {
+interface RefreshListingsButtonProps {
+  companyId: string;
+}
+
+export function RefreshListingsButton({ companyId }: RefreshListingsButtonProps) {
   const [state, setState] = useState<RefreshState>("idle");
   const [message, setMessage] = useState<string | null>(null);
 
@@ -22,9 +26,12 @@ export function RefreshListingsButton() {
     setMessage(null);
 
     try {
-      const response = await fetch("/api/admin/listings/refresh", {
-        method: "POST"
-      });
+      const response = await fetch(
+        `/api/admin/listings/refresh?companyId=${encodeURIComponent(companyId)}`,
+        {
+          method: "POST"
+        }
+      );
 
       const payload = (await response.json()) as RefreshResult & {
         error?: string;
@@ -38,9 +45,10 @@ export function RefreshListingsButton() {
       }
 
       setState("success");
-      const recordMessage = typeof payload.recordsWritten === "number"
-        ? `${payload.recordsWritten} listings refreshed.`
-        : "Listings refreshed.";
+      const recordMessage =
+        typeof payload.recordsWritten === "number"
+          ? `${payload.recordsWritten} listings refreshed.`
+          : "Listings refreshed.";
       setMessage(recordMessage);
     } catch (error) {
       console.error("Failed to refresh listings", error);

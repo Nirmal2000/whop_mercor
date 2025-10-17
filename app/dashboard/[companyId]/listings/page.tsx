@@ -38,7 +38,11 @@ export default async function AdminListingsPage({
   const resolvedParams = await unwrapOptional(params, { companyId: "" });
   const resolvedSearch = await unwrapOptional(searchParams, {});
 
-  await requireWhopCompanyAdmin();
+  if (!resolvedParams.companyId) {
+    throw new Error("Company ID is required");
+  }
+
+  await requireWhopCompanyAdmin(resolvedParams.companyId);
 
   const startDate = resolveSearchParam(resolvedSearch.startDate) ?? defaultStartDate();
   const endDate = resolveSearchParam(resolvedSearch.endDate) ?? todayDate();
@@ -67,7 +71,7 @@ export default async function AdminListingsPage({
             Review traffic and referral conversions over time. Adjust the filters to zoom into specific listing IDs or date ranges.
           </p>
         </div>
-        <RefreshListingsButton />
+        <RefreshListingsButton companyId={resolvedParams.companyId} />
       </header>
 
       <form className="grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-6 md:grid-cols-4" method="get">

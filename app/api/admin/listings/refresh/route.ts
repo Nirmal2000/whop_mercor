@@ -14,9 +14,19 @@ interface IngestionStatusBody {
   recordsWritten?: number;
 }
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const companyId = searchParams.get("companyId");
+
+  if (!companyId) {
+    return NextResponse.json(
+      { error: "companyId is required" },
+      { status: 400 }
+    );
+  }
+
   try {
-    await requireWhopCompanyAdmin();
+    await requireWhopCompanyAdmin(companyId);
   } catch (error) {
     return NextResponse.json(
       { error: "Admin privileges required" },

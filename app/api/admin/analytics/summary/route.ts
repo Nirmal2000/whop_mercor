@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
   const listingId = searchParams.get("listingId") ?? undefined;
+  const companyId = searchParams.get("companyId");
 
   if (!startDate || !endDate) {
     return NextResponse.json(
@@ -16,8 +17,15 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  if (!companyId) {
+    return NextResponse.json(
+      { error: "companyId is required" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const userId = await requireWhopCompanyAdmin();
+    const userId = await requireWhopCompanyAdmin(companyId);
     const metrics = await fetchListingMetrics({ startDate, endDate, listingId });
 
     const totals = metrics.reduce(

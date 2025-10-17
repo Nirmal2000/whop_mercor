@@ -23,6 +23,8 @@ export function MetricsSummary({ metrics, totals }: MetricsSummaryProps) {
           <thead className="bg-white/5 text-white/70">
             <tr>
               <th className="px-4 py-3 text-left font-medium">Date</th>
+              <th className="px-4 py-3 text-left font-medium">Listing</th>
+              <th className="px-4 py-3 text-left font-medium">Listing ID</th>
               <th className="px-4 py-3 text-left font-medium">Views</th>
               <th className="px-4 py-3 text-left font-medium">Overlay Opens</th>
               <th className="px-4 py-3 text-left font-medium">Referral Clicks</th>
@@ -32,7 +34,7 @@ export function MetricsSummary({ metrics, totals }: MetricsSummaryProps) {
           <tbody className="divide-y divide-white/10">
             {metrics.length === 0 ? (
               <tr>
-                <td className="px-4 py-6 text-center text-white/50" colSpan={5}>
+                <td className="px-4 py-6 text-center text-white/50" colSpan={7}>
                   No metrics available for the selected range.
                 </td>
               </tr>
@@ -41,6 +43,12 @@ export function MetricsSummary({ metrics, totals }: MetricsSummaryProps) {
                 <tr key={`${metric.listingId}-${metric.metricDate}`} className="hover:bg-white/5">
                   <td className="px-4 py-3 font-medium text-white">
                     {metric.metricDate}
+                  </td>
+                  <td className="px-4 py-3 text-white/80">
+                    {metric.listingName ?? "—"}
+                  </td>
+                  <td className="px-4 py-3 text-white/60 text-xs">
+                    {metric.listingId}
                   </td>
                   <td className="px-4 py-3 text-white/80">{metric.viewCount}</td>
                   <td className="px-4 py-3 text-white/80">{metric.overlayOpenCount}</td>
