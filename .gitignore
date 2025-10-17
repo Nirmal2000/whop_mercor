@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+*.log
+*.log.*
+.env
+.env.*
+.vercel/
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+tmp/
+.DS_Store
