@@ -1,3 +1,4 @@
+import { WhopIframeSdkProvider, WhopThemeScript } from "@whop/react";
 import type { Metadata, Viewport } from "next";
 import { Shell } from "@/components/layout/Shell";
 import "@/styles/globals.css";
@@ -18,9 +19,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <WhopThemeScript />
+      </head>
       <body>
-        <Shell>{children}</Shell>
+        <WhopIframeSdkProvider>
+          <Shell>{children}</Shell>
+        </WhopIframeSdkProvider>
       </body>
     </html>
   );
