@@ -6,8 +6,8 @@ import { requireWhopCompanyAdmin } from "@/lib/whop-auth";
 const DEFAULT_RANGE_DAYS = 30;
 
 interface AdminListingsPageProps {
-  params: Promise<{ companyId: string }> | { companyId: string };
-  searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>;
+  params: Promise<{ companyId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 async function unwrapOptional<T>(value: Promise<T> | T | undefined, fallback: T): Promise<T> {

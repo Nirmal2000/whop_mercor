@@ -19,7 +19,7 @@ export async function createServerSupabaseClient(): Promise<SupabaseClient> {
   const cookieStore = await cookies();
   const headerStore = await headers();
 
-  return createClient(supabaseUrl, supabaseServiceRoleKey, {
+  return createClient(supabaseUrl!, supabaseServiceRoleKey!, {
     global: {
       headers: {
         "X-Client-Info": "whop-job-listings/1.0.0",
@@ -29,11 +29,6 @@ export async function createServerSupabaseClient(): Promise<SupabaseClient> {
     },
     auth: {
       persistSession: false
-    },
-    cookies: {
-      get(name) {
-        return cookieStore.get(name)?.value;
-      }
-    }
+    },    
   });
 }

@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { whopSdk as baseWhopSdk } from "@/lib/whop-sdk";
 
-type AccessLevel = "no_access" | "member" | "manager" | "admin";
+type AccessLevel = "no_access" | "admin" | "customer";
 
 interface AuthResult {
   userId: string;
@@ -101,3 +101,4 @@ export async function requireWhopCompanyAdmin(
   await requireCompanyAdmin(userId, companyId);
   return userId;
 }
+

@@ -2,6 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef } from "react";
+import Markdown from "react-markdown";
 import type { ListingDetail } from "@/lib/supabase/listings";
 
 interface ListingOverlayProps {

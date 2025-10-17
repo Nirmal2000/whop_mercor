@@ -2,14 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { fetchListingById } from "@/lib/supabase/listings";
 
-interface RouteContext {
-  params: {
-    listingId: string;
-  };
-}
-
-export async function GET(_request: NextRequest, context: RouteContext) {
-  const { listingId } = context.params;
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ listingId: string }> }) {
+  const { listingId } = await params;
 
   try {
     const listing = await fetchListingById(listingId);
