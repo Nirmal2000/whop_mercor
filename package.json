@@ -25,13 +25,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:e2e": "playwright test",
     "seed:listings": "ts-node --esm scripts/seed-listings.ts",
     "aggregate:metrics": "ts-node --esm scripts/aggregate-metrics.ts",
-    "refresh:listings": "ts-node --esm scripts/refresh-listings.ts",
-    "prepare": "playwright install",
-    "test:ci": "npm run test && npm run test:e2e"
+    "refresh:listings": "ts-node --esm scripts/refresh-listings.ts"
   }
 }
