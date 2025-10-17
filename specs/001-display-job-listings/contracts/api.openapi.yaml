@@ -1,0 +1,351 @@
+openapi: 3.0.3
+info:
+  title: Job Listings Browser API
+  version: "1.0.0"
+  description: >
+    API surface for the Whop job listings experience, including listing reads,
+    engagement tracking, admin analytics, and dataset refresh controls.
+servers:
+  - url: https://example.whop.app
+    description: Production
+  - url: http://localhost:3000
+    description: Local development
+components:
+  securitySchemes:
+    WhopSession:
+      type: http
+      scheme: bearer
+      bearerFormat: Whop Token
+  parameters:
+    PageParam:
+      in: query
+      name: page
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: 1-based page index.
+    PageSizeParam:
+      in: query
+      name: pageSize
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 12
+      description: Number of listings per page.
+    SortParam:
+      in: query
+      name: sort
+      schema:
+        type: string
+        enum: [recent, pay_desc, pay_asc]
+        default: recent
+      description: Sorting strategy for listings.
+    StartDateParam:
+      in: query
+      name: startDate
+      required: true
+      schema:
+        type: string
+        format: date
+      description: Inclusive analytics window start (UTC date).
+    EndDateParam:
+      in: query
+      name: endDate
+      required: true
+      schema:
+        type: string
+        format: date
+      description: Inclusive analytics window end (UTC date).
+    ListingFilterParam:
+      in: query
+      name: listingId
+      schema:
+        type: string
+      description: Optional listing identifier to filter dashboard metrics.
+  schemas:
+    ListingSummary:
+      type: object
+      required: [listingId, title, commitment, compensation, referral, location]
+      properties:
+        listingId:
+          type: string
+        title:
+          type: string
+        commitment:
+          type: string
+          description: Employment type label (hourly, contract, etc.).
+        compensation:
+          type: object
+          required: [min, max, frequency]
+          properties:
+            min:
+              type: number
+              nullable: true
+            max:
+              type: number
+              nullable: true
+            frequency:
+              type: string
+              nullable: true
+        referral:
+          type: object
+          required: [amount, linkAvailable]
+          properties:
+            amount:
+              type: number
+              nullable: true
+            linkAvailable:
+              type: boolean
+        location:
+          type: string
+          nullable: true
+        company:
+          type: string
+          nullable: true
+    ListingDetail:
+      allOf:
+        - $ref: '#/components/schemas/ListingSummary'
+        - type: object
+          required: [description, referralLink, metadata]
+          properties:
+            description:
+              type: string
+              description: Markdown/HTML-safe detail body.
+            referralLink:
+              type: string
+              format: uri
+            metadata:
+              type: object
+              properties:
+                createdAt:
+                  type: string
+                  format: date-time
+                status:
+                  type: string
+                team:
+                  type: string
+                  nullable: true
+                hoursPerWeek:
+                  type: number
+                  nullable: true
+    Pagination:
+      type: object
+      required: [page, pageSize, totalPages, totalItems]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+        totalPages:
+          type: integer
+          minimum: 1
+        totalItems:
+          type: integer
+          minimum: 0
+    ListingCollection:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ListingSummary'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    AnalyticsEvent:
+      type: object
+      required: [listingId, eventType]
+      properties:
+        listingId:
+          type: string
+        eventType:
+          type: string
+          enum: [card_view, overlay_open, referral_click]
+        occurredAt:
+          type: string
+          format: date-time
+          description: Optional client timestamp; server will overwrite.
+        context:
+          type: object
+          additionalProperties: true
+          description: Optional metadata (page, device, etc.).
+    AnalyticsSummary:
+      type: object
+      required: [listingId, totals, trend]
+      properties:
+        listingId:
+          type: string
+        totals:
+          type: object
+          required: [viewCount, overlayOpenCount, referralClickCount, clickThroughRate]
+          properties:
+            viewCount:
+              type: integer
+            overlayOpenCount:
+              type: integer
+            referralClickCount:
+              type: integer
+            clickThroughRate:
+              type: number
+        trend:
+          type: array
+          items:
+            type: object
+            required: [date, viewCount, overlayOpenCount, referralClickCount, clickThroughRate]
+            properties:
+              date:
+                type: string
+                format: date
+              viewCount:
+                type: integer
+              overlayOpenCount:
+                type: integer
+              referralClickCount:
+                type: integer
+              clickThroughRate:
+                type: number
+    IngestionStatus:
+      type: object
+      required: [jobId, status]
+      properties:
+        jobId:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, succeeded, failed]
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        message:
+          type: string
+          nullable: true
+paths:
+  /api/listings:
+    get:
+      summary: List published job listings
+      description: Returns paginated published listings for display in the card grid.
+      security:
+        - WhopSession: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingCollection'
+        '401':
+          description: Invalid or missing Whop session
+        '500':
+          description: Unexpected error
+  /api/listings/{listingId}:
+    get:
+      summary: Fetch a single listing
+      description: Returns full detail for the sidecar overlay.
+      security:
+        - WhopSession: []
+      parameters:
+        - in: path
+          name: listingId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Listing detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingDetail'
+        '404':
+          description: Listing not found or not publishable
+        '401':
+          description: Invalid or missing Whop session
+  /api/analytics/events:
+    post:
+      summary: Record a listing engagement event
+      description: Logs listing views, overlay opens, and referral clicks for analytics.
+      security:
+        - WhopSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyticsEvent'
+      responses:
+        '202':
+          description: Event accepted for processing
+        '400':
+          description: Invalid payload or unsupported event type
+        '401':
+          description: Invalid or missing Whop session
+  /api/admin/analytics/summary:
+    get:
+      summary: Retrieve aggregated analytics for admin dashboard
+      description: Returns daily metrics over a timeframe; admin-only access.
+      security:
+        - WhopSession: []
+      parameters:
+        - $ref: '#/components/parameters/StartDateParam'
+        - $ref: '#/components/parameters/EndDateParam'
+        - $ref: '#/components/parameters/ListingFilterParam'
+      responses:
+        '200':
+          description: Aggregated analytics for requested window
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AnalyticsSummary'
+                  generatedAt:
+                    type: string
+                    format: date-time
+        '401':
+          description: Invalid or missing Whop session
+        '403':
+          description: Authenticated user lacks admin access
+  /api/admin/listings/refresh:
+    post:
+      summary: Trigger full Mercor listings ingestion
+      description: Admin-only endpoint that queues a job to truncate and repopulate `job_listings.listings` from the Mercor APIs.
+      security:
+        - WhopSession: []
+      responses:
+        '202':
+          description: Refresh job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestionStatus'
+        '409':
+          description: Refresh already running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  status:
+                    $ref: '#/components/schemas/IngestionStatus'
+        '401':
+          description: Invalid or missing Whop session
+        '403':
+          description: Authenticated user lacks admin access
