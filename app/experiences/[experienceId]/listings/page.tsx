@@ -70,10 +70,14 @@ export default async function ListingsPage({
 
   if (!data.length) {
     return (
-      <EmptyState
+      <>
+        <EmptyState
         title="No listings available"
         message="We could not find any active roles right now. Check back soon or reach out to your Whop contact for the latest openings."
       />
+        <AdminFooter experienceId={resolvedParams.experienceId} />
+      </>
+      
     );
   }
 
